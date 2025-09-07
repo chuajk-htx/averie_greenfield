@@ -1,0 +1,21 @@
+FROM python:3.11-bookworm
+
+WORKDIR /usr/src/app
+
+RUN apt-get update && apt-get install -y build-essential
+
+RUN pip install --no-cache-dir --upgrade pip
+
+COPY . .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Generate gRPC code - uncomment below for deployment version when image_service.proto is done
+#RUN python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. image_grabber.proto
+
+# Create volume mount point
+RUN mkdir -p /app/images
+
+# Run the client
+CMD ["python", "image_grabber_client.py"]
+

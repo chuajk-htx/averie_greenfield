@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package imagegrabber;
+
+service ImageGrabber {
+    rpc SendImage(ImageRequest) returns (ImageResponse);
+}
+
+message ImageRequest {
+    string filename = 1;
+    string image_base64 = 2;
+    string timestamp = 3;
+}
+
+message ImageResponse {
+    bool success = 1;
+    string message = 2;
+}
