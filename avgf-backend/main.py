@@ -42,16 +42,12 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try: 
         await connection_manager.connect(websocket, client_id)
-        logger.info(f"Client {client_id} connected")
-        
+        logger.info(f"Client {client_id} connected")    
         subscription_task = asyncio.create_task(handle_redis_subscription(client_id,websocket))
-    
         try:
             await subscription_task
         except asyncio.CancelledError:
             logger.info(f"Subscription task cancelled for client {client_id}")
-       
-                
     except WebSocketDisconnect:
         connection_manager.disconnect(client_id)
     except Exception as e:
@@ -95,7 +91,6 @@ async def handle_redis_subscription(client_id: str, websocket: WebSocket):
                 await send_error("Invalid JSON format",client_id)
             except Exception as e:
                 logger.error(f"Error sending message to client {client_id}: {str(e)}")
-    
     except asyncio.CancelledError:
         logger.info(f"Redis subscription cancelled for client {client_id}")
         raise
