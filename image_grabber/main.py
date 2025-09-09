@@ -4,7 +4,7 @@ import time
 import logging
 from watchdog.observers import Observer
 from dotenv import load_dotenv
-from file_handler import FileHandler
+from file_handler_singlethread import FileHandler
 from comm_client import CommClient
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

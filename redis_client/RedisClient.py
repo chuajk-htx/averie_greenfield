@@ -118,6 +118,9 @@ class RedisPubSub:
             return True
         except Exception as e:
             print(f"Error publishing message to Redis: {str(e)}")
+        finally:
+            if client:
+                client.close()
        
     async def subscribe_async_with_timeout(self, channel: str, timeout=1.0):
         client = self._get_async_client()

@@ -1,0 +1,12 @@
+{
+    "class_to_id": {
+        "Clear": 0,
+        "Cosmetic": 1,
+        "No": 2
+    },
+    "id_to_class": [
+        "Clear",
+        "Cosmetic",
+        "No"
+    ]
+}

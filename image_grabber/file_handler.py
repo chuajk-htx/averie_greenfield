@@ -5,6 +5,7 @@ import logging
 from watchdog.events import FileSystemEventHandler
 from threading import Lock, Thread, Timer
 from queue import Queue
+import asyncio
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ class FileHandler(FileSystemEventHandler):
     def __init__(self, comm_client, max_workers=3, batch_size = 2, batch_timeout= 2.0):
         self.comm_client = comm_client
         self.supported_formats = {".jpg", ".jpeg", ".png","bmp","webp"}
-        self.file_queue = Queue()
+        self.file_queue = Queue() #have to use queue for producer and consumer pattern
         
         #Batch configuration
         self.batch_size = batch_size
@@ -23,6 +24,8 @@ class FileHandler(FileSystemEventHandler):
         self.pending_files = []
         self.batch_lock = Lock()
         self.batch_timer = None    
+        self.processed_files = set()
+        self.processed_files_lock = Lock()
         
         # Start worker threads
         self.workers = []
@@ -43,6 +46,12 @@ class FileHandler(FileSystemEventHandler):
             return
         
         file_path = os.path.abspath(event.src_path)
+        
+        with self.processed_files_lock:
+            if file_path in self.processed_files:
+                logger.info(f"File already queued: {os.path.basename(file_path)}")
+                return
+            self.processed_files.add(file_path)
         logger.info(f"Detected new file: {file_path}")
         file_ext = os.path.splitext(file_path)[1].lower()
 
@@ -61,12 +70,10 @@ class FileHandler(FileSystemEventHandler):
                 processed_file = self._process_file(file_path)
                 if processed_file:
                     self._add_to_batch(processed_file)
-                    
                 self.file_queue.task_done()
             except Exception as e:
                 logger.error(f"Worker error: {e}")
                 
-    
     def _process_file(self, file_path, max_retries=5, retry_delay=0.5):
         """Process single file"""
         filename = os.path.basename(file_path)
@@ -78,7 +85,7 @@ class FileHandler(FileSystemEventHandler):
                 return None
                         
             try:
-                time.sleep(0.1)
+                time.sleep(1.0)
                 with open(file_path, "rb") as image_file:
                     filename = os.path.basename(file_path)
                     image_data = image_file.read()
@@ -113,34 +120,43 @@ class FileHandler(FileSystemEventHandler):
                 #reset/restart timeout timer
                 if self.batch_timer:
                     self.batch_timer.cancel()
-                self.batch_timer = Timer(self.batch_timeout, self._send_batch_timeout)
+                self.batch_timer = Timer(self.batch_timeout, self._send_batch)
                 self.batch_timer.start()
                 
-    def _send_batch_timeout(self):
-        with self.batch_lock:
-            if self.pending_files:
-                logger.info(f"Batch timeout reached sending {len(self.pending_files)} files")
-                self._send_batch()
-    
     def _send_batch(self):
+        logger.info(f"Inside _send_batch")
         if not self.pending_files:
             return
-        
-        #Extract lists for API call
-        filenames = [filedata['filename'] for filedata in self.pending_files]
-        image_base64_list = [filedata['image_base64'] for filedata in self.pending_files]
-        timestamps = [filedata['timestamp'] for filedata in self.pending_files]
-        
-        #cancel any pending timer
-        if self.batch_timer:
-            self.batch_timer = None
-        
         try:
-           success = self.comm_client.send_image(filenames, image_base64_list, timestamps)
-           if success:
-               logger.info(f"Batch sent successfully")
-           else:
-               logger.error("Batch sent faled") 
+            #with self.batch_lock:
+            #Extract lists for API call
+            filenames = [filedata['filename'] for filedata in self.pending_files]
+            image_base64_list = [filedata['image_base64'] for filedata in self.pending_files]
+            timestamps = [filedata['timestamp'] for filedata in self.pending_files]
+            #cancel any pending timer
+            if self.batch_timer:
+                self.batch_timer.cancel()
+                self.batch_timer = None
+            all_success = True
+            #for file_data in self.pending_files:
+            #    loop = asyncio.new_event_loop()
+            #    asyncio.set_event_loop(loop)
+            #    try:
+            #        success = loop.run_until_complete(self.comm_client.send_image_async(file_data['filename'], file_data['image_base64'], file_data['timestamps']))
+            #        if not success:
+            #            all_success = False
+            #    finally:
+            #        loop.close()
+            for file_data in self.pending_files:
+                logger.info(f"{file_data}")
+                success = self.comm_client.send_image(file_data['filename'],file_data['image_base64'],file_data['timestamp'])
+            
+            if success:
+                logger.info(f"Batch sent successfully")
+                self.processed_files.clear()
+                self.pending_files.clear()
+            else:
+                logger.error("Batch sent failed") 
         except Exception as e:
             logger.error(f"Error sending batches {filenames}: {e}")
             
@@ -149,7 +165,7 @@ class FileHandler(FileSystemEventHandler):
         with self.batch_lock:
             if self.pending_files:
                 logger.info("Force sending remaining batch...")
-                self._send_batch()
+                self._send_batch_on_timeout()
     
     def get_status(self):
         """Get current processing status"""

@@ -39,6 +39,22 @@ class CommClient:
         except Exception as e:
             print(f"Error sending image: {str(e)}")
             return False
+    
+    async def send_image_async(self, filename: str, image_base64: str, timestamp: float) -> bool:
+        try:
+            if self.comm_type == "grpc":
+                    return self._client.send_image(filename, image_base64, timestamp)
+            if self.comm_type == "redis":
+                    payload = {
+                        "filename": filename,
+                        "image_base64": image_base64,
+                        "timestamp": timestamp
+                    }
+                    await self._client.publish_async(channel="upload_image", payload=payload)
+            return True
+        except Exception as e:
+            print(f"Error sending image: {str(e)}")
+            return False
         
 
     def close(self):
