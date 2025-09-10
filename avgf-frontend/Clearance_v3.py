@@ -1,14 +1,17 @@
 import tempfile
 import streamlit as st
-from Preprocess_Segment_Crop import openfile, Segmenter
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import os
+import os, sys
 import glob
 from streamlit_image_zoom import image_zoom
 import base64
 import time
+
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path(parent_dir)
+from contact_lens_predictor.Preprocess_Segment_Crop import openfile, Segmenter
 
 st.title("Contact Lens Detection")
 
