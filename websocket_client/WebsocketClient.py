@@ -23,34 +23,33 @@ class WebSocketClient:
         self.latest_image_right = None
     
     def connect(self, url):
-        def _on_message(ws, message):
+        def on_message(ws, message):
             """Handle incoming websocket message"""
             try:
-                message_json = json.loads(message)
-                image_base64 = message_json['image_base64']
-                # implement message handling logic
-            except json.JSONDecodeError:
-                try:
-                    self._handle_image_base64(message)
-                except Exception as e:
-                    self.messages.append(f"Error processing data: {str(e)}")
+                return self._handle_message(message)
+            
+            except Exception as e:
+                self.messages.append(f"Error processing data: {str(e)}")
         
-        def _on_open(ws):
+        def on_open(ws):
+            self.connected = True
             logger.info(f"Websocket connection open")
         
-        def _on_error(ws, error):
+        def on_error(ws, error):
+            self.connected = False
             logger.error(f"Error msg: {error}")
         
-        def _on_close(ws, close_status_code, close_msg):
+        def on_close(ws, close_status_code, close_msg):
+            self.connected = False
             logger.info(f"Websocket connection is closed: {close_msg}")
 
         try:
             self.ws = websocket.WebSocketApp(
                 url,
-                on_open = _on_open,
-                on_message = _on_message,
-                on_error = _on_error,
-                on_close = _on_close
+                on_open = on_open,
+                on_message = on_message,
+                on_error = on_error,
+                on_close = on_close
 
             )
             # Run websocket in a separate thread
@@ -68,24 +67,20 @@ class WebSocketClient:
             self.ws.close()
         self.connected = False
     
-    def send_message(self, message):
+    def send_message(self, payload):
         """Send message to Websocket server"""
         if self.connected and self.ws:
             try:
-                self.ws.send(message)
-                logger.info(f"Send message: {message}")
+                self.ws.send(payload)
+                logger.info(f"Send message: {payload}")
             except Exception as e:
                 logger.error(f"Send error: {str(e)}")
         
-    def _handle_image_base64(self,image_base64: str):
+    def _handle_message(self, message: str):
             """Process base64 image data"""
             try:
-                if image_base64.startswith('data:'):
-                    image_base64 = image_base64.split(',',1)[1]
-                
-                #Decode base64 to image
-                image_bytes = base64.b64decode(image_base64)
-                image = Image.open(BytesIO(image_bytes))
+                message_json = json.loads(message)
+                return message_json
             except Exception as e:
                 logger.error(f"Exception occured: {e}")
             

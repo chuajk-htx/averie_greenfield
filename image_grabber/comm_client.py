@@ -1,11 +1,13 @@
 import sys
 import os
+import json
 
 # Add the parent directory to Python path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) #os.path.dirname gets the path to directory where the current script is
 sys.path.insert(0, parent_dir)
 from grpc_client.GrpcClient import ImageGrpcClient
 from redis_client.RedisClient import RedisPubSub
+from websocket_client.WebsocketClient import WebSocketClient
 
 class CommClient:
     def __init__(self, CommType: str, host: str, port: str):
@@ -23,6 +25,9 @@ class CommClient:
             redis_host = host
             redis_port = int(port)
             self._client = RedisPubSub(host=redis_host, port=redis_port)
+        if self.comm_type == "websocket":
+            websocket_server_url = f"ws://{host}:{port}/analyze"
+            self._client = WebSocketClient(server_url=websocket_server_url)
         
     def send_image(self, filename: str, image_base64: str, timestamp: float) -> bool:
         try:
@@ -35,6 +40,14 @@ class CommClient:
                         "timestamp": timestamp
                     }
                     self._client.publish(channel="upload_image", payload=payload)
+            if self.comm_type == "websocket":
+                self._client.connect()
+                payload = {
+                    "filename": filename,
+                    "image_base64": image_base64,
+                    "timestamp": timestamp
+                }
+                self._client.send_message(payload=json.dumps(payload))
             return True
         except Exception as e:
             print(f"Error sending image: {str(e)}")

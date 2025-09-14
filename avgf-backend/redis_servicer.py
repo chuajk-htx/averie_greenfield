@@ -37,7 +37,8 @@ class RedisServicer:
             try:                
                 async for message in redis_client.subscribe_async_with_timeout(channel=channel, timeout=timeout):
                     logger.info("Waiting for message...")
-                    yield message['image_base64'][:25]
+                    #yield message['image_base64'][:25]
+                    yield message
             except KeyboardInterrupt as e:
                 logger.exception(f"Redis subscriber stopped by user")
             except asyncio.CancelledError:

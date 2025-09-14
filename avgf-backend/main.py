@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 import uvicorn
 import logging
 import uuid
-from contact_lens_detection.contact_lens_detection import AnalyzeImageAsync
+#from contact_lens_detection.contact_lens_detection import AnalyzeImageAsync
 
 from redis_servicer import RedisServicer
 
@@ -37,13 +37,13 @@ redis_port = int(os.getenv("REDIS_PORT", 6379))
 redis_servicer = RedisServicer(redis_host, redis_port)
 
 @app.websocket("/analyze")
-async def websocket_endpoint(websocket: WebSocket):
+async def image_analyze_endpoint(websocket: WebSocket):
     client_id = str(uuid.uuid4())[:8]  # Generate a short unique client ID
     
     try: 
         await connection_manager.connect(websocket, client_id)
         logger.info(f"Client {client_id} connected")    
-        subscription_task = asyncio.create_task(handle_redis_subscription(client_id,websocket))
+        subscription_task = asyncio.create_task(handle_redis_subscription(client_id, websocket))
         try:
             await subscription_task
         except asyncio.CancelledError:
@@ -99,7 +99,7 @@ async def handle_redis_subscription(client_id: str, websocket: WebSocket):
         try:
             await send_error(f"Subscription error: {str(e)}",client_id)
         except:
-            pass 
+            pass
 
 
 if __name__ == "__main__":

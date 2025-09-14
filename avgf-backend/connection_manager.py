@@ -9,10 +9,6 @@ from typing import Dict
 from pathlib import Path
 import logging
 
-UPLOAD_DIR = "./received_images"
-
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: dict[str, WebSocket] = {}
+        self.active_connections: Dict[str, WebSocket] = {}
 
     async def connect(self, websocket: WebSocket, client_id: str) -> bool:
         try:
