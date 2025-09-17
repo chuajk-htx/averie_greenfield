@@ -36,6 +36,68 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 redis_servicer = RedisServicer(redis_host, redis_port)
 
+
+@app.websocket("/upload_image")
+async def upload_image_endpoint(websocket: WebSocket):
+    try:
+        client_id = await connection_manager.connect(websocket)
+        response = {
+            "type": "welcome",
+            "client_id": client_id,
+            "message": "Connected to upload endpoint"
+        }
+        await connection_manager.send_message(response, client_id)
+        logger.info(f"Client {client_id} connected")
+        while True:
+            try:
+                data = await websocket.receive_text()
+                message = json.loads(data)
+                logger.info(f"Image file uploaded by client {client_id}") 
+                logger.info(f"Message\n:{message}")
+                ack_msg = {
+                    "type": "ack",
+                    "message": "Image received"
+                }
+                await connection_manager.send_message(ack_msg, client_id)
+            
+            except WebSocketDisconnect:
+                logger.info(f"Client {client_id} disconnected")
+                break
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON from client {client_id}: {e}")
+                error_msg = {
+                    "type": "error",
+                    "message": "Invalid JSON format"
+                }
+                # FIXED: Check if connection is still active before sending
+                if client_id and connection_manager.is_connected(client_id):
+                    await connection_manager.send_message(error_msg, client_id)
+            except Exception as e:
+                logger.error(f"Error processing message from client {client_id}: {str(e)}")
+                error_msg = {
+                    "type": "error",
+                    "message": f"Upload error: {str(e)}"
+                }
+                # FIXED: Check connection before sending error
+                if client_id and connection_manager.is_connected(client_id):
+                    await connection_manager.send_message(error_msg, client_id)
+    except Exception as e:
+        logger.error(f"Unexpected error for client {client_id}: {str(e)}")
+        if client_id and connection_manager.is_connected(client_id):
+            try:
+                error_msg = {
+                    "type": "error",
+                    "message": f"Server error: {str(e)}"
+                }
+                await connection_manager.send_message(error_msg, client_id)
+            except Exception as send_error:
+                logger.error(f"Failed to send error message: {send_error}")
+       
+    finally:
+        if client_id:
+            connection_manager.disconnect(client_id)
+            logger.info(f"Cleanup completed for client {client_id}")
+
 @app.websocket("/analyze")
 async def image_analyze_endpoint(websocket: WebSocket):
     client_id = str(uuid.uuid4())[:8]  # Generate a short unique client ID

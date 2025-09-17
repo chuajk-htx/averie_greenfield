@@ -13,8 +13,8 @@ class CommClient:
     def __init__(self, CommType: str, host: str, port: str):
         self.comm_type = CommType.lower()
         try:
-            if self.comm_type not in ["grpc", "redis"]:
-                raise ValueError("Unsupported communication type. Use 'gRPC' or 'Redis'.")
+            if self.comm_type not in ["grpc", "redis", "websocket"]:
+                raise ValueError("Unsupported communication type. Use 'grpc', 'redis', 'websocket'.")
         except ValueError as ve:
             print(str(ve))
             return 
@@ -26,7 +26,7 @@ class CommClient:
             redis_port = int(port)
             self._client = RedisPubSub(host=redis_host, port=redis_port)
         if self.comm_type == "websocket":
-            websocket_server_url = f"ws://{host}:{port}/analyze"
+            websocket_server_url = f"ws://{host}:{port}/upload_image"
             self._client = WebSocketClient(server_url=websocket_server_url)
         
     def send_image(self, filename: str, image_base64: str, timestamp: float) -> bool:
