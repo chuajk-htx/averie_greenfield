@@ -15,56 +15,98 @@ sys.path.insert(0,parent_dir)
 from websocket_client.WebsocketClient import WebSocketClient
 #from contact_lens_predictor.Preprocess_Segment_Crop import openfile, Segmenter
 
+def initialize_components():
+    pass
 
-def live_analysis():
+def process_analytics_results():
+    pass
+
+
+
+def live_analysis_main():
 
     st.set_page_config(page_title="Greenfield Demo App - Live Analysis", layout="wide") 
     st.title("Live Analysis")
+
+    #todo initialize components
+    initialize_components()
+
+    #Process any completed analytics results
+    process_analytics_results()
+
+    #Display controls
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("🔄 Refresh"):
+            st.rerun()
+
+    #Display images
+    if st.session_state.get('image_tasks'):
+        sorted_tasks = sorted(
+            st.session_state['image_tasks'].items(),
+            key=lambda x: x[1]['timestamp'],
+            reverse=True
+        )
+
+        for task_id, task_data in sorted_tasks:
+            with st.container():
+                st.markdown("---")
+                display_image_with_analytics(task_id, task_data)
+    else:
+        st.info("Waiting for images...")
+    
+    time.sleep(2)
+    st.rerun()
+
+
     
     # WebSocket Connection Section
-    st.markdown("Connect to a websocket server to receive images for real-time contact lens detection.")
+    # st.markdown("Connect to a websocket server to receive images for real-time contact lens detection.")
 
-    if 'ws_client' not in st.session_state:
-        st.session_state.ws_client = WebSocketClient()
+    # if 'ws_client' not in st.session_state:
+    #     st.session_state.ws_client = WebSocketClient()
         
-    with st.expander("WebSocket Connection Settings", expanded=False):
-        #Connection Controls
-        col1, col2, col3 = st.columns([3,1,1])
+    # with st.expander("WebSocket Connection Settings", expanded=False):
+    #     #Connection Controls
+    #     col1, col2, col3 = st.columns([3,1,1])
 
-        with col1:
-            ws_url = st.text_input("WebSocket Server URL"
-                                    , value="ws://localhost:8000/analyze",
-                                    placeholder="ws://localhost:8000/analyze")
-        with col2:
-            if st.button("Connect"):
-                if ws_url:
-                    with st.spinner("Connecting..."):
-                        success = st.session_state.ws_client.connect(ws_url)
-                        if success:
-                            st.success(f"Connected to {ws_url}")
-                        else:
-                            st.error(f"Failed to connect to {ws_url}")
-                else:
-                    st.error("Please enter a valid WebSocket URL")
+    #     with col1:
+    #         ws_url = st.text_input("WebSocket Server URL"
+    #                                 , value="ws://localhost:8000/analyze",
+    #                                 placeholder="ws://localhost:8000/analyze")
+    #     with col2:
+    #         if st.button("Connect"):
+    #             if ws_url:
+    #                 with st.spinner("Connecting..."):
+    #                     success = st.session_state.ws_client.connect(ws_url)
+    #                     if success:
+    #                         st.success(f"Connected to {ws_url}")
+    #                     else:
+    #                         st.error(f"Failed to connect to {ws_url}")
+    #             else:
+    #                 st.error("Please enter a valid WebSocket URL")
 
-        with col3:
-                if not st.session_state.ws_client.connected:
-                    st.session_state.ws_client.disconnect()
+    #     with col3:
+    #             if not st.session_state.ws_client.connected:
+    #                 st.session_state.ws_client.disconnect()
                 
-                st.info("Disconnected")
+    #             st.info("Disconnected")
 
-        #Connection Status display
-        status_color = "🟢" if st.session_state.ws_client.connected else "🔴"
-        st.markdown(f"**Connection Status:** {status_color} {'Connected' if st.session_state.ws_client.connected else 'Disconnected'}")
+    #     #Connection Status display
+    #     status_color = "🟢" if st.session_state.ws_client.connected else "🔴"
+    #     st.markdown(f"**Connection Status:** {status_color} {'Connected' if st.session_state.ws_client.connected else 'Disconnected'}")
 
-    #Image Display Section
-    st.markdown("### Received Images")
-    print("Connected:", st.session_state.ws_client.connected)
-    if st.session_state.ws_client.connected:
-        message_json = st.session_state.ws_client.on_message
-        st.write(f"filename {message_json.get('filename')}")
-        st.writef(f"image_base64:{message_json.get('image_base64')[:25]}")        
-        time.sleep(0.5)
+    # #Image Display Section
+    # st.markdown("### Received Images")
+    # print("Connected:", st.session_state.ws_client.connected)
+    # if st.session_state.ws_client.connected:
+    #     message_json = st.session_state.ws_client.on_message
+    #     st.write(f"filename {message_json.get('filename')}")
+    #     st.writef(f"image_base64:{message_json.get('image_base64')[:25]}")        
+    #     time.sleep(0.5)
+
+
 
 #Display received images
 
@@ -372,3 +414,5 @@ def live_analysis():
 #         st.toast(f"Traveller {traveller} Verified")
 #         st.subheader("")
 
+if __name__=="__main__":
+    live_analysis_main()

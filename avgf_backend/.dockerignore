@@ -15,11 +15,12 @@ nosetests.xml
 coverage.xml
 *.cover
 *.log
-.git/
+.git
 .gitignore
 .dockerignore
 .mypy_cache
 .pytest_cache
 .hypothesis
-venv/
-__pycache__/
+venv
+.python-version
+
