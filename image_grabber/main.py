@@ -1,4 +1,6 @@
-import os
+import os, sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
 import base64
 import time
 import logging
@@ -9,6 +11,7 @@ from comm_client import CommClient
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 def main():
     load_dotenv()

@@ -1,3 +1,4 @@
+import datetime
 import os
 import base64
 import time
@@ -18,37 +19,44 @@ class FileHandler(FileSystemEventHandler):
         self.batch_timeout = batch_timeout
         
         # Batch storage
-        self.pending_files = []
+        self.pending_messages = []
         self.batch_timer = None    
         self.processed_files = set()
         
     def on_created(self, event):
+        if len(self.processed_files) >2:
+            self.processed_files.clear()
+            logger.info("Cleared processed_files set to manage memory")
         self._handle_event(event)
         
     def on_modified(self, event):
+        if len(self.processed_files) >2:
+            self.processed_files.clear()
+            logger.info("Cleared processed_files set to manage memory")
         self._handle_event(event)
     
     def _handle_event(self, event):
         if event.is_directory:
             return
         
-        file_path = os.path.abspath(event.src_path)
-
-        if file_path in self.processed_files:
+        filepath = os.path.abspath(event.src_path)
+        
+        if filepath in self.processed_files:
             return
+
+        self.processed_files.add(filepath)
         
-        self.processed_files.add(file_path)
-        
-        logger.info(f"Detected new file: {file_path}")
-        file_ext = os.path.splitext(file_path)[1].lower()
+        logger.info(f"Detected new file: {filepath}")
+        file_ext = os.path.splitext(filepath)[1].lower()
 
         if file_ext not in self.supported_formats:
             logger.warning(f"Unsupported file format: {file_ext}")
             return
-        processed_file = self._process_file(file_path) 
+        message_to_send = self._process_file(filepath) 
         
-        if processed_file:
-           self._add_to_batch(processed_file)
+        if message_to_send:
+           self._add_to_batch(message_to_send)
+        
                 
     def _process_file(self, file_path, max_retries=5, retry_delay=0.5):
         """Process single file"""
@@ -70,7 +78,7 @@ class FileHandler(FileSystemEventHandler):
                     logger.info(f"filename:{filename}, timestamp:{timestamp}, image_base64:{image_base64[:10]}")
                     return {
                         'filename': filename,
-                        'image_base64': image_base64,
+                        'image_base64': image_base64[:10],
                         'timestamp': timestamp
                     }
                     
@@ -84,12 +92,12 @@ class FileHandler(FileSystemEventHandler):
                     return None
         return None
 
-    def _add_to_batch(self, processed_file):
-        self.pending_files.append(processed_file)
-        logger.info(f"Added to batch: {processed_file['filename']}"
-                    f"(batch size: {len(self.pending_files)}/{self.batch_size})"
+    def _add_to_batch(self, message_to_send: dict):
+        self.pending_messages.append(message_to_send)
+        logger.info(f"Added to batch: {message_to_send['filename']}"
+                    f"(batch size: {len(self.pending_messages)}/{self.batch_size})"
                     )
-        if len(self.pending_files) >= self.batch_size:
+        if len(self.pending_messages) >= self.batch_size:
             self._send_batch()
         else:
             #reset/restart timeout timer
@@ -100,36 +108,40 @@ class FileHandler(FileSystemEventHandler):
             
     def _send_batch(self):
         logger.info(f"Inside _send_batch")
-        if not self.pending_files:
+        if not self.pending_messages:
             return
-        logging.info(f"Sending a batch of {len(self.pending_files)} files")
+        logging.info(f"Sending a batch of {len(self.pending_messages)} files")
         
         if self.batch_timer:
             self.batch_timer.cancel()
             self.batch_timer = None
         
         try:
-            for file_data in self.pending_files:
+            for file_data in self.pending_messages:
                 success = self.comm_client.send_image(file_data['filename'],file_data['image_base64'],file_data['timestamp'])
             
             if not success:
                 logger.error (f"Failed to send {file_data['filename']}")
                 
             logger.info("Batch sent successfully") 
-            self.pending_files.clear()
+            self.pending_messages.clear()
+            
+            # for old_path in list(self.processed_files):
+            #     self._rename_processed_files(old_path)
+            # logger.info("Processed files renamed successfully")
             
         except Exception as e:
             logger.error(f"Failed to send batch: {e}")
             
     def force_send_batch(self):
         """Manually trigger sending of current batch (useful for shutdown)"""
-        if self.pending_files:
+        if self.pending_messages:
             logger.info("Force sending remaining batch...")
             self._send_batch_on_timeout()
 
     def get_status(self):
         """Get current processing status"""
-        pending_count = len(self.pending_files)
+        pending_count = len(self.pending_messages)
         
         return {
             "queued_files": self.file_queue.qsize(),
@@ -137,3 +149,25 @@ class FileHandler(FileSystemEventHandler):
             "batch_size_limit": self.batch_size,
             "batch_timeout": self.batch_timeout
         }
+    
+    #Not implemented yet
+    def _rename_processed_files(self, old_path: str):
+        """Handle file renaming events"""
+        if old_path in self.processed_files:
+            if not os.path.exists(old_path):
+                logger.warning(f"File does not exist for renaming: {old_path}")
+                return
+            
+            dir_name, base_name = os.path.split(old_path)
+            name, ext = os.path.splitext(base_name)
+            new_name = f"{name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+            new_path = os.path.join(dir_name, new_name)
+            
+            try:
+                os.rename(old_path, new_path)
+                logger.info(f"File renamed from {old_path} to {new_path}")
+                self.processed_files.remove(old_path)
+                logger.info(f"Removed {old_path} from processed_files set")
+            except Exception as e:
+                logger.error(f"Error renaming file {old_path} to {new_path}: {e}")
+                

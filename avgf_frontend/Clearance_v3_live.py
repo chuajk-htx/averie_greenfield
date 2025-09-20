@@ -21,6 +21,9 @@ def initialize_components():
 def process_analytics_results():
     pass
 
+def display_image_with_analytics(task_id, task_data):
+    raise NotImplementedError
+
 
 
 def live_analysis_main():

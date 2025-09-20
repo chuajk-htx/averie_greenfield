@@ -82,7 +82,6 @@ class RedisPubSub:
                         
                     # Skip subscription confirmation messages
                     if message['type'] == 'subscribe':
-                        logger.info(f"Subscribed to {message['channel'].decode('utf-8')}")
                         continue
                         
                     # Process actual messages
