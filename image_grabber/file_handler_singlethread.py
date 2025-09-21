@@ -24,9 +24,11 @@ class FileHandler(FileSystemEventHandler):
         
     def on_created(self, event):
         self._handle_event(event)
+        self._clear_set()
         
     def on_modified(self, event):
         self._handle_event(event)
+        self._clear_set()
     
     def _handle_event(self, event):
         if event.is_directory:
@@ -137,3 +139,6 @@ class FileHandler(FileSystemEventHandler):
             "batch_size_limit": self.batch_size,
             "batch_timeout": self.batch_timeout
         }
+    def _clear_set(self):
+        """Clear the processed files set (for testing purposes)"""
+        self.processed_files.clear()

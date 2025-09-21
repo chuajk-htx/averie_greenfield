@@ -28,10 +28,11 @@ class RedisPubSub:
             self._sync_client = redis.Redis(host=self.redis_host, port=self.redis_port, db=self.redis_db)
         return self._sync_client
     
-    def _get_async_client(self) -> aioredis.Redis:
+    async def _get_async_client(self) -> aioredis.Redis:  # Made async
         if self._async_client is None:
-            self._async_client = aioredis.Redis(host=self.redis_host, port=self.redis_port, db=0)
+            self._async_client = aioredis.Redis(host=self.redis_host, port=self.redis_port, db=self.redis_db)  # Fixed db parameter
         return self._async_client
+    
     # Context manager methods for synchronous usage
     def __enter__(self):
         return self
@@ -61,10 +62,10 @@ class RedisPubSub:
             return True
         except Exception as e:
             logger.exception(f"Error publishing message to Redis: {str(e)}")
+            return False  # Added return False
     
-    def subscribe_with_timeout(self, channel: str, timeout :float=1):
+    def subscribe_with_timeout(self, channel: str, timeout: float = 1):
         client = self._get_sync_client()
-        pubsub = None
         try:
             self.pubsub = client.pubsub()
             self.pubsub.subscribe(channel)
@@ -72,7 +73,7 @@ class RedisPubSub:
             
             while True:
                 try:
-                    # Wait up to 1 second for a message
+                    # Wait up to timeout seconds for a message
                     message = self.pubsub.get_message(timeout=timeout)
                     
                     if message is None:
@@ -94,7 +95,8 @@ class RedisPubSub:
                             logger.exception(f"Error decoding message: {e}")
                         
                 except KeyboardInterrupt:
-                    logger.exception("Subscription stopped by user")
+                    logger.info("Subscription stopped by user")  # Changed from exception to info
+                    break
         except Exception as e:
             logger.exception(f"Error subscribing to Redis channel '{channel}': {str(e)}")
         finally:
@@ -102,6 +104,7 @@ class RedisPubSub:
                 try:
                     self.pubsub.unsubscribe(channel)
                     self.pubsub.close()
+                    self.pubsub = None  # Added cleanup
                     logger.info("Redis subscriber is closed")
                 except Exception as e:
                     logger.error(f"Error closing pubsub: {e}")
@@ -109,22 +112,21 @@ class RedisPubSub:
     ################################################
     #              Asynchronous Methods            # 
     ################################################
-    async def publish_async(self, channel: str, payload: dict):
+    async def publish_async(self, channel: str, payload: dict) -> bool:  # Added return type
+        client = None
         try:
-            client = self._get_async_client()
+            client = await self._get_async_client()  # Added await
             message = json.dumps(payload)
             result = await client.publish(channel, message)
             logger.debug(f"Published to {channel}, {result} subscribers received")
             return True
         except Exception as e:
-            print(f"Error publishing message to Redis: {str(e)}")
-        finally:
-            if client:
-                client.close()
+            logger.exception(f"Error publishing message to Redis: {str(e)}")  # Changed to exception
+            return False
+        # Removed finally block - don't close client here
        
     async def subscribe_async_with_timeout(self, channel: str, timeout=1.0):
-        client = self._get_async_client()
-        this_timeout = timeout
+        client = await self._get_async_client()  # Added await
         try:
             self.pubsub_async = client.pubsub()
             await self.pubsub_async.subscribe(channel)
@@ -134,7 +136,7 @@ class RedisPubSub:
                 try:
                     message = await asyncio.wait_for(
                         self.pubsub_async.get_message(),
-                        timeout=this_timeout
+                        timeout=timeout
                     )
                     if message is None:
                         continue
@@ -147,11 +149,12 @@ class RedisPubSub:
                         except (json.JSONDecodeError, UnicodeDecodeError) as e:
                             logger.error(f"Error decoding message from '{channel}': {e}")
                 
-                except asyncio.TimeoutError as e:
-                    #Timeout is normal, continue listening
+                except asyncio.TimeoutError:
+                    # Timeout is normal, continue listening
                     continue
-        except KeyboardInterrupt:
-            logger.info("Subscription stopped by user")
+                except KeyboardInterrupt:
+                    logger.info("Subscription stopped by user")
+                    break
         except Exception as e:
             logger.error(f"Error in async subscription: {e}")
         finally:
@@ -159,6 +162,7 @@ class RedisPubSub:
                 try:
                     await self.pubsub_async.unsubscribe(channel)
                     await self.pubsub_async.close()
+                    self.pubsub_async = None  # Added cleanup
                     logger.info(f"Unsubscribed from channel '{channel}' (async)")
                 except Exception as e:
                     logger.error(f"Error closing subscriber: {e}")
@@ -171,7 +175,7 @@ class RedisPubSub:
         try:
             if self.pubsub:
                 self.pubsub.close()
-                self.pubsub=None
+                self.pubsub = None
             if self._sync_client:
                 self._sync_client.close()
                 self._sync_client = None
@@ -179,13 +183,13 @@ class RedisPubSub:
         except Exception as e:
             logger.error(f"Error closing sync resources: {e}")
     
-    def close_async(self):
+    async def close_async(self):  # Made properly async
         try:
             if self.pubsub_async:
-                self.pubsub_async.close()
-                self.pubsub_async=None
+                await self.pubsub_async.close()  # Added await
+                self.pubsub_async = None
             if self._async_client:
-                self._async_client.close()
+                await self._async_client.close()  # Added await
                 self._async_client = None
                 logger.info("Async Redis client closed")
         except Exception as e:

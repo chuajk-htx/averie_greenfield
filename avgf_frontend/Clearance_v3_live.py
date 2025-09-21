@@ -12,7 +12,6 @@ import time
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(parent_dir)
 sys.path.insert(0,parent_dir)
-from websocket_client.WebsocketClient import WebSocketClient
 #from contact_lens_predictor.Preprocess_Segment_Crop import openfile, Segmenter
 
 def initialize_components():
