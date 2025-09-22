@@ -1,5 +1,9 @@
 import streamlit as st
-from Clearance_v3_live import live_analysis
+#from Clearance_v3_live import live_analysis
+
+#import Clearance_v3
+from test_mock_page1 import offline_analysis
+from test_mock_page2 import live_analysis
 
 def main():
     # Custom CSS to center tabs
@@ -41,11 +45,10 @@ def main():
     tab1, tab2 = st.tabs(["Offline Analysis", "Live Analysis"])
     
     with tab1:
-        st.title("Offline Analysis")
-        st.markdown("To be done")
+        offline_analysis()
+        
     with tab2:
         live_analysis()
-
     
 if __name__=="__main__":
     main()

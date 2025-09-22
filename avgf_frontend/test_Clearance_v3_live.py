@@ -49,7 +49,7 @@ if ls_all_sorted_files is not None:
     for item in ls_all_sorted_files:
         mtime = os.path.getmtime(item)
         #operate only on file created/modified in the last 2 seconds
-        if mtime-time.time() < 2b:
+        if mtime-time.time() < 2:
             # Create a temp file in specified dir 
             direct = '/Users/averie/Documents/Algos/GF_demoapp/temp/'
 
