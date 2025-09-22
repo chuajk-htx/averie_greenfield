@@ -24,7 +24,7 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 redis_servicer = RedisServicer(redis_host, redis_port)
 
-received_image_files_dir = os.getenv("IMAGE_FILES_DIR", "./received_image_files")
+received_image_files_dir = os.getenv("RECEIVED_IMAGE_FILES_DIR", "./received_image_files")
 os.makedirs(received_image_files_dir, exist_ok=True)
 
 async def handle_redis_subscription():

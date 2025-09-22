@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def main():
-    load_dotenv()
+    load_dotenv("..\env")
     WATCH_FOLDER = os.getenv("WATCH_FOLDER", ".\watch_folder")
     HOST = os.getenv("HOST", "localhost")
     PORT = os.getenv("PORT", "6379")
