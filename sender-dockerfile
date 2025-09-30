@@ -25,8 +25,8 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Copy application code
-COPY image_grabber .
-COPY redis_client .
+#COPY image_grabber .
+#COPY redis_client .
 
 # Create non-root user for security
 #RUN adduser --disabled-password --gecos '' appuser && \
@@ -40,4 +40,4 @@ COPY redis_client .
 #HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD curl -f http://localhost:8000/health || exit 1
 
 # Default command
-CMD ["python", "app.py"]FROM python:3.11.9   
+CMD ["python3", "./image_grabber/main.py"] 

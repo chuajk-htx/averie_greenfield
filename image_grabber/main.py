@@ -11,7 +11,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def main():
-    load_dotenv("..\env")
+    env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    load_dotenv(env_path)
     WATCH_FOLDER = os.getenv("WATCH_FOLDER", ".\watch_folder")
     HOST = os.getenv("HOST", "localhost")
     PORT = os.getenv("PORT", "6379")
@@ -21,6 +22,7 @@ def main():
     
     logger.info(f"Starting Image Grabber Service")
     logger.info(f"Watching folder: {WATCH_FOLDER}")
+    logger.info(f"HOST: {HOST}")
     
     #Set up file system watcher
     this_client = CommClient(CommType="redis", host=HOST, port=PORT)

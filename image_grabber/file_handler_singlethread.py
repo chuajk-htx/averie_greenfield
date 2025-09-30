@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class FileHandler(FileSystemEventHandler):
     def __init__(self, comm_client, batch_size = 2, batch_timeout= 2.0):
         self.comm_client = comm_client
-        self.supported_formats = {".jpg", ".jpeg", ".png","bmp","webp"}
+        self.supported_formats = {".jpg", ".jpeg", ".png",".bmp",".webp"}
         
         #Batch configuration
         self.batch_size = batch_size
