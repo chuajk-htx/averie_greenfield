@@ -14,7 +14,8 @@ import glob
 import math
 import iris
 import logging
-import dotenv
+from dotenv import load_dotenv
+from utils import get_recent_files
 
 parent_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path(parent_directory)
@@ -29,13 +30,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-def get_recent_files(directory, file_ext):
-    if "." not in file_ext:
-        file_ext = f".{file_ext}"
-    pattern = os.path.join(directory, f"*{file_ext}")
-    ls_all_files = glob.glob(pattern)
-    return sorted(ls_all_files,key=os.path.getmtime, reverse=True)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(env_path)
 
 def live_analysis():
     st.set_page_config(page_title="Live Analysis", layout="wide")
@@ -52,7 +48,9 @@ def live_analysis():
     ls_clickable_images = []
 
     #uploaded_file = st.file_uploader("Upload an image file", type=["jpg","jpeg","bmp","png","tiff"], label_visibility="hidden", accept_multiple_files=True)
-    received_files_directory = os.path.join(parent_directory,"./received_image_files")
+    RECV_IMG_FILES_DIR = os.getenv("RECV_IMG_FILES_DIR",".\received_image_files")
+    IMG_FILE_EXT = os.getenv("IMG_FILE_EXT",".bmp")
+    received_files_directory = os.path.join(parent_directory,RECV_IMG_FILES_DIR)
     ls_all_sorted_files = get_recent_files(received_files_directory)
     
     logger.info(f"{ls_all_sorted_files}") 

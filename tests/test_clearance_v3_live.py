@@ -4,13 +4,14 @@ import sys
 from time import sleep
 from typing import List
 import unittest
-from avgf_frontend.get_recent_files import get_recent_files
+import shutil
+from avgf_frontend.utils import get_recent_files
 
 class TestClearanceV3Live(unittest.TestCase):
     
     def _create_mock_folder_files(self, foldername, list_len) -> List[str]:
         filepaths = []
-        dirpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), foldername)
+        dirpath = os.path.join(os.path.dirname(__file__), foldername)
         os.makedirs(f"{dirpath}", exist_ok=True)
         for i in range(list_len):
             filename = f"testfile_{i+1}.txt"
@@ -28,6 +29,7 @@ class TestClearanceV3Live(unittest.TestCase):
         expected = sorted(test_filepaths,key=os.path.getctime, reverse=True)
         actual = get_recent_files(directory=dirpath, file_ext="txt")
         self.assertEqual(expected,actual)
+        shutil.rmtree(dirpath)
         
         
     

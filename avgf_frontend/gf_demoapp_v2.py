@@ -2,8 +2,8 @@ import streamlit as st
 #from Clearance_v3_live import live_analysis
 
 #import Clearance_v3
-from test_mock_page1 import offline_analysis
-from test_mock_page2 import live_analysis
+from avgf_frontend.mock_page1 import offline_analysis
+from avgf_frontend.mock_page2 import live_analysis
 
 def main():
     # Custom CSS to center tabs
